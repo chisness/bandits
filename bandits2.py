@@ -20,15 +20,13 @@ class Arm:
 # concrete classes implement
 # def choose_arm():
 
-
 class Bandits:
-	def __init__(self, arms, e=.1, n = 10):
+	def __init__(self, arms):
 		self.arms = arms
-		self.e = e
-		self.q = np.random.normal(0,1,self.arms)
+		self.q = np.random.normal(0, 1, self.arms)
+		# some of these should be private, like self.q
 		self.actual_best_arm = max(self.q)
 		self.actual_best_arm_ix = np.argmax(self.q)
-		self.n = n
 		self.arm_history = { arm: Arm(0, 0) for arm in range(0, arms) }
 		self.total_reward = 0
 		self.total_pulls = 0
@@ -36,16 +34,8 @@ class Bandits:
 	def reset(self):
 		pass
 
-	def initial_pulls(self):
-		for arm in range(0, self.arms):
-			for i in range(0, n):
-				self.pull(arm)
-
 	def choose_arm(self):
-		if random.random() < self.e:
-			return random.randint(0, self.arms - 1)
-		best_arm = self.best_arm()
-		return best_arm
+		raise NotImplementedError("concrete implementations of Bandits must implement choose_arm")
 
 	# TODO: move everything that is common to all pull strategies into shared method
 	def pull(self, arm_choice = None):
@@ -83,6 +73,33 @@ class Bandits:
 	#EPSILON-GREEDY with epsilon 
 	#2000 runs each of 1000 time steps, take average of all
 
+class EpsilonGreedy(Bandits):
+	def __init__(self, arms, e=.1, n=10):
+		super().__init__(arms)
+		self.e = e
+		self.n = n
+		self.initialized = False
+
+	def initial_pulls(self):
+		for arm in range(0, self.arms):
+			for i in range(0, self.n):
+				self.pull(arm)
+
+	def choose_arm(self):
+		if not self.initialized:
+			self.initial_pulls()
+			self.initialized = True
+		if random.random() < self.e:
+			return random.randint(0, self.arms - 1)
+		best_arm = self.best_arm()
+		return best_arm
+
+class UCB(Bandits):
+	def __init__(self, arms):
+		super().__init__(arms)
+
+	def choose_arm(self):
+		pass
 
 if __name__ == "__main__":
 	# for n in [10, 100]:
@@ -100,19 +117,28 @@ if __name__ == "__main__":
 		runs = 2000
 
 		avg_rewarde000 = np.zeros((timesteps, runs))
+		avg_rewarde000ip = np.zeros((timesteps, runs))
 		avg_rewarde001 = np.zeros((timesteps, runs))
+		avg_rewarde001ip = np.zeros((timesteps, runs))
 		avg_rewarde010 = np.zeros((timesteps, runs))
+		avg_rewarde010ip = np.zeros((timesteps, runs))
 		avg_rewarde050 = np.zeros((timesteps, runs))
+		avg_rewarde050ip = np.zeros((timesteps, runs))
 
 
 		avg_regrete000 = np.zeros((timesteps, runs))
+		avg_regrete000ip = np.zeros((timesteps, runs))
 		avg_regrete001 = np.zeros((timesteps, runs))
+		avg_regrete001ip = np.zeros((timesteps, runs))
 		avg_regrete010 = np.zeros((timesteps, runs))
+		avg_regrete010ip = np.zeros((timesteps, runs))
 		avg_regrete050 = np.zeros((timesteps, runs))
+		avg_regrete050ip = np.zeros((timesteps, runs))
 
 		#b = Bandits(10, e=.1, n=n)
+
 		for i in range(runs):
-			b = Bandits(10, e=0, n=n)
+			b = EpsilonGreedy(10, e=0, n=n)
 			#b.initial_pulls()
 			for j in range(timesteps):
 				b.pull()
@@ -120,7 +146,15 @@ if __name__ == "__main__":
 				avg_regrete000[j,i] = b.average_regret()
 
 		for i in range(runs):
-			b = Bandits(10, e=0.01, n=n)
+			b = EpsilonGreedy(10, e=0, n=n)
+			b.initial_pulls()
+			for j in range(timesteps):
+				b.pull()
+				avg_rewarde000ip[j,i] = b.average_reward()
+				avg_regrete000ip[j,i] = b.average_regret()
+
+		for i in range(runs):
+			b = EpsilonGreedy(10, e=0.01, n=n)
 			#b.initial_pulls()
 			for j in range(timesteps):
 				b.pull()
@@ -128,7 +162,15 @@ if __name__ == "__main__":
 				avg_regrete001[j,i] = b.average_regret()
 
 		for i in range(runs):
-			b = Bandits(10, e=0.1, n=n)
+			b = EpsilonGreedy(10, e=0.01, n=n)
+			b.initial_pulls()
+			for j in range(timesteps):
+				b.pull()
+				avg_rewarde001ip[j,i] = b.average_reward()
+				avg_regrete001ip[j,i] = b.average_regret()
+
+		for i in range(runs):
+			b = EpsilonGreedy(10, e=0.1, n=n)
 			#b.initial_pulls()
 			for j in range(timesteps):
 				b.pull()
@@ -136,18 +178,39 @@ if __name__ == "__main__":
 				avg_regrete010[j,i] = b.average_regret()
 
 		for i in range(runs):
-			b = Bandits(10, e=0.1, n=n)
+			b = EpsilonGreedy(10, e=0.1, n=n)
+			b.initial_pulls()
+			for j in range(timesteps):
+				b.pull()
+				avg_rewarde010ip[j,i] = b.average_reward()
+				avg_regrete010ip[j,i] = b.average_regret()
+
+		for i in range(runs):
+			b = EpsilonGreedy(10, e=0.1, n=n)
 			#b.initial_pulls()
 			for j in range(timesteps):
 				b.pull()
 				avg_rewarde050[j,i] = b.average_reward()
 				avg_regrete050[j,i] = b.average_regret()
+
+
+		for i in range(runs):
+			b = EpsilonGreedy(10, e=0.1, n=n)
+			b.initial_pulls()
+			for j in range(timesteps):
+				b.pull()
+				avg_rewarde050ip[j,i] = b.average_reward()
+				avg_regrete050ip[j,i] = b.average_regret()
 		#print(avg_reward)
 		plt.figure(figsize=(15, 4), dpi=100)
 		plt.plot(np.arange(timesteps),np.mean(avg_rewarde000, axis=1), color='green', label ='epsilon = 0 (greedy)')
 		plt.plot(np.arange(timesteps),np.mean(avg_rewarde001, axis=1), color='red', label = 'epsilon = 0.01')
 		plt.plot(np.arange(timesteps),np.mean(avg_rewarde010, axis=1), color='blue', label = 'epsilon = 0.1')
 		plt.plot(np.arange(timesteps),np.mean(avg_rewarde050, axis=1), color='orange', label = 'epsilon = 0.5')
+		plt.plot(np.arange(timesteps),np.mean(avg_rewarde000ip, axis=1), color='green', label ='epsilon = 0 (greedy)', ls = 'dashed')
+		plt.plot(np.arange(timesteps),np.mean(avg_rewarde001ip, axis=1), color='red', label = 'epsilon = 0.01', ls = 'dashed')
+		plt.plot(np.arange(timesteps),np.mean(avg_rewarde010ip, axis=1), color='blue', label = 'epsilon = 0.1', ls = 'dashed')
+		plt.plot(np.arange(timesteps),np.mean(avg_rewarde050ip, axis=1), color='orange', label = 'epsilon = 0.5', ls = 'dashed')
 		plt.ylabel('Average reward')
 		plt.xlabel('Steps')
 		plt.legend(loc='lower left')
@@ -158,6 +221,10 @@ if __name__ == "__main__":
 		plt.plot(np.arange(timesteps),np.mean(avg_regrete001, axis=1), color='red', label = 'epsilon = 0.01')
 		plt.plot(np.arange(timesteps),np.mean(avg_regrete010, axis=1), color='blue', label = 'epsilon = 0.1')
 		plt.plot(np.arange(timesteps),np.mean(avg_regrete050, axis=1), color='orange', label = 'epsilon = 0.5')
+		plt.plot(np.arange(timesteps),np.mean(avg_regrete000ip, axis=1), color='green', label ='epsilon = 0 (greedy)', ls = 'dashed')
+		plt.plot(np.arange(timesteps),np.mean(avg_regrete001ip, axis=1), color='red', label = 'epsilon = 0.01', ls = 'dashed')
+		plt.plot(np.arange(timesteps),np.mean(avg_regrete010ip, axis=1), color='blue', label = 'epsilon = 0.1', ls = 'dashed')
+		plt.plot(np.arange(timesteps),np.mean(avg_regrete050ip, axis=1), color='orange', label = 'epsilon = 0.5', ls = 'dashed')
 		plt.ylabel('Average regret')
 		plt.xlabel('Steps')
 		plt.legend(loc='lower left')
